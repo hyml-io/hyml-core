@@ -35,6 +35,7 @@ func printUsage() {
 }
 
 func runValidate(path string) {
+
 	content, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatalf("Read error: %v", err)
@@ -43,6 +44,17 @@ func runValidate(path string) {
 	l := lexer.New(string(content))
 	p := parser.New(l)
 	program := p.ParseHYML()
+
+	// 1. CHECK FOR ERRORS BEFORE SUCCESS MESSAGE
+	errors := p.Errors() // Assuming you have an Errors() method returning []string
+	if len(errors) > 0 {
+		fmt.Printf("❌ %s failed validation:\n", path)
+		for _, msg := range errors {
+			fmt.Printf("  - %s\n", msg)
+		}
+		// Exit or return early so we don't claim success
+		os.Exit(1)
+	}
 
 	fmt.Printf("✅ %s parsed successfully.\n", path)
 	fmt.Println("\n--- Structural Tracing ---")
