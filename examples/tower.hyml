@@ -1,0 +1,22 @@
+DOCTYPE: html
+
+case:
+
+apartment:template:
+  div:
+    p: "Unidad de vivienda"
+
+header:
+  h1: "Proyecto San Ramón"
+
+main:
+  - apartment:
+  - apartament:
+
+
+luxury_apto:apartment:
+  div: "Luxury"
+
+div:
+  - luxury_apto:
+  

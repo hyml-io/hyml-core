@@ -1,0 +1,23 @@
+{
+  "tags": 
+  [
+    "template",
+    "import",
+    "if",
+    "for",
+    "include",
+    "alert",
+    "console",
+    "switch",
+    "case",
+    "or",
+    "and",
+    "given",
+    "such-that",
+    "then",
+    "else",
+    "finally",
+    "while",
+    "literal"
+  ]
+}
