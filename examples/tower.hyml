@@ -1,8 +1,14 @@
 DOCTYPE: html
 
+html:
+
+title:
+
+body:
+
 case:
 
-apartment:template:
+template:
   div:
     p: "Unidad de vivienda"
 
@@ -14,7 +20,7 @@ main:
   - apartament:
 
 
-luxury_apto:apartment:
+apartment:
   div: "Luxury"
 
 div:
