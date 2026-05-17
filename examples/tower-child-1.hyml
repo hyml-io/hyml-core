@@ -1,0 +1,28 @@
+master: examples/tower.hyml
+
+def:
+  - template: apartment
+    content:
+      div:
+        p: "Motel Room Unit"
+    overwrite: true
+  - var: test
+    type: number
+    value: 21
+  - var: page_title
+    type: string
+    value: "This is the Child 1 Page Title"
+    overwrite:
+      type: append
+  - var: message
+    type: string
+    value: Holi
+
+title:
+  value: $(page_title)
+  overwrite: true
+
+content-placeholder-resolver:
+  name: main-area
+  content:
+    p: $(message)

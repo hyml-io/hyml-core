@@ -1,0 +1,84 @@
+hyml-version: v0.1
+
+def:
+  - template: apartment
+    content:
+      div:
+        p: "House Unit"
+    enable-overwrite: false
+  - template: car
+    content: examples/car.hyml
+  - json: list
+    file: examples/list.json
+  - var: test
+    type: number
+    value: 25
+    enable-overwrite: true
+  - var: page_title
+    type: string
+    value: "This is the Master Page Title"
+    enable-overwrite:
+      type: append
+
+html:
+  title: $(page_title)
+
+  body:
+    - if:
+        and:
+          - ref: $(test)
+            lt: 30
+          - ref: $(test)
+            gt: 24
+        then:
+          h1: test number is between than 24 and 30
+        else-if:
+          or:
+            - ref: $(test)
+              eq: 20
+            - ref: $(test)
+              eq: 21 
+          then: 
+            h1: test number is 20 or 21
+        else:
+          h1: test number is lower than 20
+    
+    - literal: <p> This is a literal example </p>
+    
+    - table:
+        ths:
+          - th: title
+          - th: id
+          - th: representative
+        tds:
+          - td: title
+          - td: id
+          - td: representative
+        trs:
+          for:
+            x: 0
+            lt: $(list.count)
+            grow: ++
+            do:
+              tr:
+                cells: 
+                  title: $(list[x].title)
+                  id: $(list[x].id)
+                  representative: $(list[x].representative)
+                
+    - content-placeholder:
+        name: main-area
+    
+    - apartment: Apartament 1
+
+    - car: Car 1
+
+    - header:
+        h1: "Project San Ramon"
+
+    - main:
+        - apartment: Apartament 2
+        - apartment: Apartament 3
+
+    - apartment:
+        div: "Luxury"

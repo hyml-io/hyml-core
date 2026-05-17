@@ -1,0 +1,36 @@
+{
+  "control_flow": [
+    "if",
+    "else-if",
+    "else",
+    "then",
+    "and",
+    "or",
+    "for",
+    "do"
+  ],
+  "data_driven": [
+    "json",
+    "file",
+    "ths",
+    "trs",
+    "tds",
+    "cells",
+    "x",
+    "lt",
+    "gt",
+    "eq",
+    "count",
+    "grow",
+    "ref"
+  ],
+  "metadata": [
+    "def",
+    "template",
+    "var",
+    "content",
+    "type",
+    "enable-overwrite",
+    "master"
+  ]
+}

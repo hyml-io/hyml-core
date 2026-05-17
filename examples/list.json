@@ -1,0 +1,19 @@
+{
+  "titles": [
+    {
+        "id": 101,
+        "title": "Title 1",
+        "representative": "Excelsio Gutierrez"
+    },
+    {
+        "id": 102,
+        "title": "Title 2",
+        "representative": "Muguldio Fuanter"
+    },
+    {
+        "id": 101,
+        "name": "Title 3",
+        "representative": "Abella Kushita"
+    }
+  ]
+}
