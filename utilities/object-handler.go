@@ -17,15 +17,8 @@ func (objectHandler ObjectHandler) GenerateYamlProperties(yamls []*entities.Hyml
 
 	for _, yaml := range yamls {
 		yamlProperties = append(yamlProperties, generateProperty("hyml-version", yaml.HymlVersion, yaml.FileName))
-		//yamlProperties = append(yamlProperties, generateProperty("Action.Type", yaml.Action.Type, yaml.Header.Name, yaml.Action.CanOverwrite))
-		//yamlProperties = append(yamlProperties, generateProperty("Action.ShutdownSignal", yaml.Action.ShutdownSignal, yaml.Header.Name, yaml.Action.CanOverwrite))
-		//yamlProperties = append(yamlProperties, generateProperty("Action.Platform.OsFamily", yaml.Action.Platform.OsFamily, yaml.Header.Name, yaml.Action.CanOverwrite))
-		//yamlProperties = append(yamlProperties, generateProperty("Action.Platform.PackageInstaller", yaml.Action.Platform.PackageInstaller, yaml.Header.Name, yaml.Action.CanOverwrite))
-		//yamlProperties = append(yamlProperties, generateArrayProperty("Action.Platform.InstallationDependencies", yaml.Action.InstallationDependencies, yaml.Header.Name, yaml.Action.CanOverwrite))
-		//yamlProperties = append(yamlProperties, generateArrayProperty("Action.InitialInputs", yaml.Action.InitialInputs, yaml.Header.Name, yaml.Action.CanOverwrite))
 		yamlProperties = append(yamlProperties, generateDictionaryProperty("def", yaml.Def, yaml.FileName))
 		yamlProperties = append(yamlProperties, generateHtmlDictionaryProperty("html", yaml.Html, yaml.FileName))
-
 	}
 
 	return yamlProperties

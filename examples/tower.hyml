@@ -13,7 +13,7 @@ def:
   - var: test
     type: number
     value: 25
-    enable-overwrite: true
+    enable-overwrite: false
   - var: page_title
     type: string
     value: "This is the Master Page Title"
@@ -31,7 +31,7 @@ html:
           - ref: $(test)
             gt: 24
         then:
-          h1: test number is between than 24 and 30
+          h1: test number is between 24 and 30
         else-if:
           or:
             - ref: $(test)
