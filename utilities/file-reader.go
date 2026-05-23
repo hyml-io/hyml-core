@@ -25,30 +25,19 @@ func (fileReader FileReader) ReadAllYamls(path string) []*entities.HymlDocument 
 	//fileReader.readDef(yaml.Def)
 
 	if len(yaml.Def) > 0 {
-
-		// Filter the slice
-		localTemplates := extractLocalTemplates(yaml)
-
-		// Output the result
-		fmt.Printf("Local templates:\n%#v\n", localTemplates)
-
-		localParsedTemplates, err := ParseTemplates(localTemplates)
+		parsedTemplates, err := ParseTemplates(yaml)
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		fmt.Printf("Local parsed templates:\n%#v\n", localParsedTemplates)
+		fmt.Printf("Parsed templates:\n%#v\n", parsedTemplates)
 
-		externalTemplates := extractExternalTemplates(yaml)
-		// Output the result
-		fmt.Printf("External templates:\n%#v\n", externalTemplates)
+		localParsedVars, err := ParseVars(yaml)
 
-		vars := extractVariables(yaml)
-
-		fmt.Printf("Variables:\n%#v\n", vars)
-
-		localParsedVars, err := ParseVars(vars)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		fmt.Printf("Parsed Variables:\n%#v\n", localParsedVars)
 
@@ -67,8 +56,10 @@ func (fileReader FileReader) ReadAllYamls(path string) []*entities.HymlDocument 
 	return yamlsArray
 }
 
-func ParseVars(extractedMaps []map[string]any) ([]entities.Var, error) {
+func ParseVars(yaml *entities.HymlDocument) ([]entities.Var, error) {
 	var variables []entities.Var
+
+	extractedMaps := extractVariables(yaml)
 
 	for i, item := range extractedMaps {
 		// 1. Extract Name
@@ -171,10 +162,27 @@ func castValueToType(val any, targetType string) (any, error) {
 	}
 }
 
-func ParseTemplates(extractedMaps []map[string]any) ([]entities.Template, error) {
+func ParseTemplates(yaml *entities.HymlDocument) ([]entities.Template, error) {
 	var templates []entities.Template
 
-	for i, item := range extractedMaps {
+	extractedLocalTemplates := extractLocalTemplates(yaml)
+	extractedExternalTemplates := extractExternalTemplates(yaml)
+
+	templates, err := parseLocalTemplates(extractedLocalTemplates, templates)
+	if err != nil {
+		return templates, err
+	}
+
+	templates, err = parseExternalTemplates(extractedExternalTemplates, templates)
+	if err != nil {
+		return templates, err
+	}
+
+	return templates, nil
+}
+
+func parseLocalTemplates(extractedLocalTemplates []map[string]any, templates []entities.Template) ([]entities.Template, error) {
+	for i, item := range extractedLocalTemplates {
 		// 1. Extract and validate Name (from "template" key)
 		templateNameVal, exists := item["template"]
 		if !exists {
@@ -208,20 +216,73 @@ func ParseTemplates(extractedMaps []map[string]any) ([]entities.Template, error)
 		}
 
 		// 4. Polymorphically parse Content based on its underlying type
-		switch v := contentVal.(type) {
+		switch value := contentVal.(type) {
 		case string:
 			// It's a file reference (e.g., "examples/car.hyml")
-			tmpl.ContentPath = v
+			tmpl.ContentPath = value
 		case map[string]any:
 			// It's an inline nested map structural tree
-			tmpl.Content = v
+			tmpl.Content = value
 		default:
-			return nil, fmt.Errorf("item '%s' has an invalid 'content' type: %T", name, v)
+			return nil, fmt.Errorf("item '%s' has an invalid 'content' type: %T", name, value)
 		}
 
 		templates = append(templates, tmpl)
 	}
+	return templates, nil
+}
 
+func parseExternalTemplates(extractedExternalTemplates []map[string]any, templates []entities.Template) ([]entities.Template, error) {
+	for i, item := range extractedExternalTemplates {
+		// 1. Extract and validate Name (from "template" key)
+		templateNameVal, exists := item["template"]
+		if !exists {
+			return nil, fmt.Errorf("item at index %d is missing the required 'template' key", i)
+		}
+
+		name, ok := templateNameVal.(string)
+		if !ok {
+			return nil, fmt.Errorf("item at index %d has a non-string 'template' key", i)
+		}
+
+		// 2. Extract Content field
+		contentVal, hasContent := item["content"]
+		if !hasContent {
+			return nil, fmt.Errorf("item at index %d ('%s') is missing the required path in 'content' key", i, name)
+		}
+
+		// 3. Determine Locked status (Opposite of enable-overwrite)
+		locked := false
+		if overwriteVal, hasOverwrite := item["enable-overwrite"]; hasOverwrite {
+			// If explicitly a boolean and explicitly false, it is locked
+			if overwriteBool, isBool := overwriteVal.(bool); isBool && !overwriteBool {
+				locked = true
+			}
+		}
+
+		// Initialize our entity instance with the baseline data
+		tmpl := entities.Template{
+			Name:   name,
+			Locked: locked,
+		}
+
+		// 4. Polymorphically parse Content based on its underlying type
+		switch value := contentVal.(type) {
+		case string:
+			// It's a file reference (e.g., "examples/car.hyml")
+			tmpl.ContentPath = value
+			referencedFile := fileReader.ReadPartialYaml(value)
+
+			tmpl.Content = referencedFile.Content
+		case map[string]any:
+			// It's an inline nested map structural tree
+			tmpl.Content = value
+		default:
+			return nil, fmt.Errorf("item '%s' has an invalid 'content' type: %T", name, value)
+		}
+
+		templates = append(templates, tmpl)
+	}
 	return templates, nil
 }
 
@@ -331,6 +392,19 @@ func (fileReader FileReader) ReadYaml(filePath string) *entities.HymlDocument {
 	yamlFile.FileName = stringHandler.GetFilenameWithoutExtension(filePath)
 
 	return &yamlFile
+}
+
+func (fileReader FileReader) ReadPartialYaml(filePath string) *entities.PartialDocument {
+
+	data := ReadRawYaml(filePath)
+
+	var partialFile entities.PartialDocument
+	err := yaml.Unmarshal(*data, &partialFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return &partialFile
 }
 
 func ReadRawYaml(filePath string) *[]byte {
