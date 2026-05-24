@@ -5,4 +5,5 @@ type Template struct {
 	ContentPath string
 	Content     map[string]interface{}
 	Locked      bool
+	Args        map[string]Arg
 }

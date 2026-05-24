@@ -8,6 +8,9 @@ def:
     enable-overwrite: false
   - template: car
     content: examples/car.hyml
+    args:
+      - name: unit_number
+        value: 36
   - json: list
     file: examples/list.json
   - var: test
@@ -17,26 +20,27 @@ def:
   - var: page_title
     type: string
     value: "This is the Master Page Title"
-    enable-overwrite:
-      type: append
+
 
 html:
-  title: $(page_title)
+  title: $var(page_title)
+  enable-overwrite:
+    type: append
 
   body:
     - if:
         and:
-          - ref: $(test)
+          - ref: $var(test)
             lt: 30
-          - ref: $(test)
+          - ref: $var(test)
             gt: 24
         then:
           h1: test number is between 24 and 30
         else-if:
           or:
-            - ref: $(test)
+            - ref: $var(test)
               eq: 20
-            - ref: $(test)
+            - ref: $var(test)
               eq: 21 
           then: 
             h1: test number is 20 or 21
@@ -57,13 +61,13 @@ html:
         trs:
           for:
             x: 0
-            lt: $(list.count)
+            lt: $json(list.count)
             grow: ++
             do:
               tr:
                 cells: 
-                  title: $(list[x].title)
-                  id: $(list[x].id)
+                  title: $json(list[x].title)
+                  id: $json(list[x].id)
                   representative: $(list[x].representative)
                 
     - content-placeholder:

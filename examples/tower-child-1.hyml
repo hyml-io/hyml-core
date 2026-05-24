@@ -12,17 +12,16 @@ def:
   - var: page_title
     type: string
     value: "This is the Child 1 Page Title"
-    overwrite:
-      type: append
   - var: message
     type: string
     value: Holi
 
 title:
-  value: $(page_title)
-  overwrite: true
+  value: $var(page_title)
+  overwrite:
+    type: append
 
 content-placeholder-resolver:
   name: main-area
   content:
-    p: $(message)
+    p: $var(message)

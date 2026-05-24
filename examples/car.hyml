@@ -1,4 +1,10 @@
 template: car
+
+args:
+  - name: unit_number
+    type: number
+    default: 25
+
 content:
   div:
-    p: "Car Unit"
+    p: "Car Unit Number: $arg(unit_number)"

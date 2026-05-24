@@ -22,8 +22,6 @@ func (fileReader FileReader) ReadAllYamls(path string) []*entities.HymlDocument 
 
 	yaml := fileReader.ReadYaml(path)
 
-	//fileReader.readDef(yaml.Def)
-
 	if len(yaml.Def) > 0 {
 		parsedTemplates, err := ParseTemplates(yaml)
 
@@ -33,22 +31,17 @@ func (fileReader FileReader) ReadAllYamls(path string) []*entities.HymlDocument 
 
 		fmt.Printf("Parsed templates:\n%#v\n", parsedTemplates)
 
-		localParsedVars, err := ParseVars(yaml)
+		parsedVars, err := ParseVars(yaml)
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		fmt.Printf("Parsed Variables:\n%#v\n", localParsedVars)
+		fmt.Printf("Parsed Variables:\n%#v\n", parsedVars)
 
 		jsons := extractJsonReferences(yaml)
 
 		fmt.Printf("JSON files:\n%#v\n", jsons)
-
-		// 	importInherit := entities.ImportInherit{ParentPath: parentPath, ParentName: parentName}
-		// 	yaml.Parent = fileReader.ReadYaml(importInherit.ParentPath)
-		// 	newYamlArray := fileReader.ReadAllYamls(importInherit.ParentPath)
-		// 	yamlsArray = append(yamlsArray, newYamlArray...)
 	}
 
 	yamlsArray = append(yamlsArray, yaml)
@@ -56,12 +49,12 @@ func (fileReader FileReader) ReadAllYamls(path string) []*entities.HymlDocument 
 	return yamlsArray
 }
 
-func ParseVars(yaml *entities.HymlDocument) ([]entities.Var, error) {
-	var variables []entities.Var
+func ParseVars(yaml *entities.HymlDocument) (map[string]entities.Var, error) {
+	variables := make(map[string]entities.Var)
 
-	extractedMaps := extractVariables(yaml)
+	extractedRawVars := extractVariables(yaml)
 
-	for i, item := range extractedMaps {
+	for i, item := range extractedRawVars {
 		// 1. Extract Name
 		varNameVal, exists := item["var"]
 		if !exists {
@@ -100,12 +93,12 @@ func ParseVars(yaml *entities.HymlDocument) ([]entities.Var, error) {
 			}
 		}
 
-		variables = append(variables, entities.Var{
+		variables[name] = entities.Var{
 			Name:   name,
 			Type:   varType,
 			Value:  parsedValue,
 			Locked: locked,
-		})
+		}
 	}
 
 	return variables, nil
@@ -162,26 +155,35 @@ func castValueToType(val any, targetType string) (any, error) {
 	}
 }
 
-func ParseTemplates(yaml *entities.HymlDocument) ([]entities.Template, error) {
-	var templates []entities.Template
+func ParseTemplates(yaml *entities.HymlDocument) (map[string]entities.Template, error) {
+	templates := make(map[string]entities.Template)
 
 	extractedLocalTemplates := extractLocalTemplates(yaml)
 	extractedExternalTemplates := extractExternalTemplates(yaml)
 
-	templates, err := parseLocalTemplates(extractedLocalTemplates, templates)
+	parsedLocalTemplates, err := parseLocalTemplates(extractedLocalTemplates)
 	if err != nil {
 		return templates, err
 	}
 
-	templates, err = parseExternalTemplates(extractedExternalTemplates, templates)
+	for _, item := range parsedLocalTemplates {
+		templates[item.Name] = item
+	}
+
+	parsedExternalTemplates, err := parseExternalTemplates(extractedExternalTemplates)
 	if err != nil {
 		return templates, err
+	}
+
+	for _, item := range parsedExternalTemplates {
+		templates[item.Name] = item
 	}
 
 	return templates, nil
 }
 
-func parseLocalTemplates(extractedLocalTemplates []map[string]any, templates []entities.Template) ([]entities.Template, error) {
+func parseLocalTemplates(extractedLocalTemplates []map[string]any) ([]entities.Template, error) {
+	templates := []entities.Template{}
 	for i, item := range extractedLocalTemplates {
 		// 1. Extract and validate Name (from "template" key)
 		templateNameVal, exists := item["template"]
@@ -232,7 +234,9 @@ func parseLocalTemplates(extractedLocalTemplates []map[string]any, templates []e
 	return templates, nil
 }
 
-func parseExternalTemplates(extractedExternalTemplates []map[string]any, templates []entities.Template) ([]entities.Template, error) {
+func parseExternalTemplates(extractedExternalTemplates []map[string]any) ([]entities.Template, error) {
+	templates := []entities.Template{}
+
 	for i, item := range extractedExternalTemplates {
 		// 1. Extract and validate Name (from "template" key)
 		templateNameVal, exists := item["template"]
@@ -274,6 +278,7 @@ func parseExternalTemplates(extractedExternalTemplates []map[string]any, templat
 			referencedFile := fileReader.ReadPartialYaml(value)
 
 			tmpl.Content = referencedFile.Content
+			tmpl.Args, _ = parseArgs(referencedFile.Args)
 		case map[string]any:
 			// It's an inline nested map structural tree
 			tmpl.Content = value
@@ -284,6 +289,50 @@ func parseExternalTemplates(extractedExternalTemplates []map[string]any, templat
 		templates = append(templates, tmpl)
 	}
 	return templates, nil
+}
+
+func parseArgs(rawArgs entities.RawArgs) (map[string]entities.Arg, error) {
+	arguments := make(map[string]entities.Arg)
+
+	for i, item := range rawArgs {
+		// 1. Extract Name
+		argNameVal, exists := item["name"]
+		if !exists {
+			return nil, fmt.Errorf("item at index %d is missing the required 'name' key", i)
+		}
+		name, ok := argNameVal.(string)
+		if !ok {
+			return nil, fmt.Errorf("item at index %d has a non-string 'name' key", i)
+		}
+
+		rawDefault, _ := item["default"]
+
+		rawValue, _ := item["value"]
+
+		// 3. Extract Type string
+		argType := ""
+		if typeVal, hasType := item["type"]; hasType {
+			if tStr, ok := typeVal.(string); ok {
+				argType = tStr
+			}
+		} else {
+			fmt.Println("No encontro el tipo")
+		}
+
+		parsedDefault, _ := castValueToType(rawDefault, argType)
+
+		parsedValue, _ := castValueToType(rawValue, argType)
+
+		arguments[name] = entities.Arg{
+			Name:    name,
+			Type:    argType,
+			Value:   parsedValue,
+			Default: parsedDefault,
+		}
+
+	}
+
+	return arguments, nil
 }
 
 func extractJsonReferences(yaml *entities.HymlDocument) []map[string]any {
@@ -375,10 +424,6 @@ func extractLocalTemplates(yaml *entities.HymlDocument) []map[string]any {
 	return localTemplates
 }
 
-func (fileReader FileReader) readDef(def entities.Def) {
-	fmt.Printf("%+v\n", def)
-}
-
 func (fileReader FileReader) ReadYaml(filePath string) *entities.HymlDocument {
 
 	data := ReadRawYaml(filePath)
@@ -416,12 +461,3 @@ func ReadRawYaml(filePath string) *[]byte {
 
 	return &data
 }
-
-// func findYamlByName(yamls []*entities.HymlDocument, templateName string) *entities.HymlDocument {
-// 	for _, yaml := range yamls {
-// 		if yaml.Header.Name == templateName {
-// 			return yaml
-// 		}
-// 	}
-// 	return nil
-// }
