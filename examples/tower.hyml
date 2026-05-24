@@ -5,7 +5,7 @@ def:
     content:
       div:
         p: "House Unit"
-    enable-overwrite: false
+    enable-master-overwrite: false
   - template: car
     content: examples/car.hyml
     args:
@@ -69,7 +69,7 @@ html:
                 cells: 
                   title: $json(list[x].title)
                   id: $json(list[x].id)
-                  representative: $(list[x].representative)
+                  representative: $json(list[x].representative)
                 
     - content-placeholder:
         name: main-area

@@ -5,7 +5,7 @@ def:
     content:
       div:
         p: "Motel Room Unit"
-    overwrite: true
+    master-overwrite: true
   - var: test
     type: number
     value: 21

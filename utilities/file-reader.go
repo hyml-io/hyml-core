@@ -25,7 +25,7 @@ func (fileReader FileReader) ReadAllYamls(path string) []*entities.HymlDocument 
 	yaml := fileReader.ReadYaml(path)
 
 	if len(yaml.Def) > 0 {
-		parsedTemplates, err := ParseTemplates(yaml)
+		parsedTemplates, err := fileReader.ParseTemplates(yaml)
 
 		if err != nil {
 			log.Fatal(err)
@@ -41,7 +41,7 @@ func (fileReader FileReader) ReadAllYamls(path string) []*entities.HymlDocument 
 
 		fmt.Printf("Parsed Variables:\n%#v\n", parsedVars)
 
-		parsedJsons, err := ParseJsons(yaml)
+		parsedJsons, err := fileReader.ParseJsons(yaml)
 
 		var prettyJsons [][]byte
 
@@ -181,7 +181,7 @@ func castValueToType(val any, targetType string) (any, error) {
 	}
 }
 
-func ParseTemplates(yaml *entities.HymlDocument) (map[string]entities.Template, error) {
+func (fileReader FileReader) ParseTemplates(yaml *entities.HymlDocument) (map[string]entities.Template, error) {
 	templates := make(map[string]entities.Template)
 
 	extractedLocalTemplates := extractLocalTemplates(yaml)
@@ -196,7 +196,7 @@ func ParseTemplates(yaml *entities.HymlDocument) (map[string]entities.Template, 
 		templates[item.Name] = item
 	}
 
-	parsedExternalTemplates, err := parseExternalTemplates(extractedExternalTemplates)
+	parsedExternalTemplates, err := fileReader.parseExternalTemplates(extractedExternalTemplates)
 	if err != nil {
 		return templates, err
 	}
@@ -208,7 +208,7 @@ func ParseTemplates(yaml *entities.HymlDocument) (map[string]entities.Template, 
 	return templates, nil
 }
 
-func ParseJsons(yaml *entities.HymlDocument) (map[string]entities.Json, error) {
+func (fileReader FileReader) ParseJsons(yaml *entities.HymlDocument) (map[string]entities.Json, error) {
 	jsons := make(map[string]entities.Json)
 
 	extractedJsonReferences := extractJsonReferences(yaml)
@@ -243,7 +243,7 @@ func ParseJsons(yaml *entities.HymlDocument) (map[string]entities.Json, error) {
 func parseLocalTemplates(extractedLocalTemplates []map[string]any) ([]entities.Template, error) {
 	templates := []entities.Template{}
 	for i, item := range extractedLocalTemplates {
-		// 1. Extract and validate Name (from "template" key)
+
 		templateNameVal, exists := item["template"]
 		if !exists {
 			return nil, fmt.Errorf("item at index %d is missing the required 'template' key", i)
@@ -254,15 +254,13 @@ func parseLocalTemplates(extractedLocalTemplates []map[string]any) ([]entities.T
 			return nil, fmt.Errorf("item at index %d has a non-string 'template' key", i)
 		}
 
-		// 2. Extract Content field
 		contentVal, hasContent := item["content"]
 		if !hasContent {
 			return nil, fmt.Errorf("item at index %d ('%s') is missing the required 'content' key", i, name)
 		}
 
-		// 3. Determine Locked status (Opposite of enable-overwrite)
 		locked := false
-		if overwriteVal, hasOverwrite := item["enable-overwrite"]; hasOverwrite {
+		if overwriteVal, hasOverwrite := item["enable-master-overwrite"]; hasOverwrite {
 			// If explicitly a boolean and explicitly false, it is locked
 			if overwriteBool, isBool := overwriteVal.(bool); isBool && !overwriteBool {
 				locked = true
@@ -271,8 +269,8 @@ func parseLocalTemplates(extractedLocalTemplates []map[string]any) ([]entities.T
 
 		// Initialize our entity instance with the baseline data
 		tmpl := entities.Template{
-			Name:   name,
-			Locked: locked,
+			Name:         name,
+			MasterLocked: locked,
 		}
 
 		tmpl.Content = contentVal.(map[string]any)
@@ -282,11 +280,11 @@ func parseLocalTemplates(extractedLocalTemplates []map[string]any) ([]entities.T
 	return templates, nil
 }
 
-func parseExternalTemplates(extractedExternalTemplates []map[string]any) ([]entities.Template, error) {
+func (fileReader FileReader) parseExternalTemplates(extractedExternalTemplates []map[string]any) ([]entities.Template, error) {
 	templates := []entities.Template{}
 
 	for i, item := range extractedExternalTemplates {
-		// 1. Extract and validate Name (from "template" key)
+
 		templateNameVal, exists := item["template"]
 		if !exists {
 			return nil, fmt.Errorf("item at index %d is missing the required 'template' key", i)
@@ -297,15 +295,13 @@ func parseExternalTemplates(extractedExternalTemplates []map[string]any) ([]enti
 			return nil, fmt.Errorf("item at index %d has a non-string 'template' key", i)
 		}
 
-		// 2. Extract Content field
 		contentVal, hasContent := item["content"]
 		if !hasContent {
 			return nil, fmt.Errorf("item at index %d ('%s') is missing the required path in 'content' key", i, name)
 		}
 
-		// 3. Determine Locked status (Opposite of enable-overwrite)
 		locked := false
-		if overwriteVal, hasOverwrite := item["enable-overwrite"]; hasOverwrite {
+		if overwriteVal, hasOverwrite := item["enable-master-overwrite"]; hasOverwrite {
 			// If explicitly a boolean and explicitly false, it is locked
 			if overwriteBool, isBool := overwriteVal.(bool); isBool && !overwriteBool {
 				locked = true
@@ -314,8 +310,8 @@ func parseExternalTemplates(extractedExternalTemplates []map[string]any) ([]enti
 
 		// Initialize our entity instance with the baseline data
 		tmpl := entities.Template{
-			Name:   name,
-			Locked: locked,
+			Name:         name,
+			MasterLocked: locked,
 		}
 
 		// It's a file reference (e.g., "examples/car.hyml")

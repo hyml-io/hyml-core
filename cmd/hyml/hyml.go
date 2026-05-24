@@ -7,7 +7,6 @@ import (
 )
 
 var fileReader = utilities.FileReader{}
-var objectHandler = utilities.ObjectHandler{}
 
 func main() {
 
@@ -15,10 +14,5 @@ func main() {
 
 	yamls := fileReader.ReadAllYamls(filePath)
 
-	generalProperties := objectHandler.GenerateYamlProperties(yamls)
-
-	fmt.Printf("---\n---\n---Vienen las propiedades\n")
-
-	fmt.Printf("%+v\n", generalProperties)
-
+	fmt.Printf("\nLos Yamls: %+v\n", yamls)
 }
