@@ -217,17 +217,7 @@ func parseLocalTemplates(extractedLocalTemplates []map[string]any) ([]entities.T
 			Locked: locked,
 		}
 
-		// 4. Polymorphically parse Content based on its underlying type
-		switch value := contentVal.(type) {
-		case string:
-			// It's a file reference (e.g., "examples/car.hyml")
-			tmpl.ContentPath = value
-		case map[string]any:
-			// It's an inline nested map structural tree
-			tmpl.Content = value
-		default:
-			return nil, fmt.Errorf("item '%s' has an invalid 'content' type: %T", name, value)
-		}
+		tmpl.Content = contentVal.(map[string]any)
 
 		templates = append(templates, tmpl)
 	}
@@ -270,21 +260,12 @@ func parseExternalTemplates(extractedExternalTemplates []map[string]any) ([]enti
 			Locked: locked,
 		}
 
-		// 4. Polymorphically parse Content based on its underlying type
-		switch value := contentVal.(type) {
-		case string:
-			// It's a file reference (e.g., "examples/car.hyml")
-			tmpl.ContentPath = value
-			referencedFile := fileReader.ReadPartialYaml(value)
+		// It's a file reference (e.g., "examples/car.hyml")
+		tmpl.ContentPath = contentVal.(string)
+		referencedFile := fileReader.ReadPartialYaml(contentVal.(string))
 
-			tmpl.Content = referencedFile.Content
-			tmpl.Args, _ = parseArgs(referencedFile.Args)
-		case map[string]any:
-			// It's an inline nested map structural tree
-			tmpl.Content = value
-		default:
-			return nil, fmt.Errorf("item '%s' has an invalid 'content' type: %T", name, value)
-		}
+		tmpl.Content = referencedFile.Content
+		tmpl.Args, _ = parseArgs(referencedFile.Args)
 
 		templates = append(templates, tmpl)
 	}
