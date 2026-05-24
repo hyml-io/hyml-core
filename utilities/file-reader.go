@@ -1,8 +1,6 @@
 package utilities
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"hyml-core/entities"
 	"log"
@@ -43,29 +41,10 @@ func (fileReader FileReader) ReadAllYamls(path string) []*entities.HymlDocument 
 
 		parsedJsons, err := fileReader.ParseJsons(yaml)
 
-		var prettyJsons [][]byte
-
-		for _, item := range parsedJsons {
-			// Since item.Content is already a plain []byte, we can check its length
-			if len(item.Content) == 0 {
-				continue
-			}
-
-			var prettyBuf bytes.Buffer
-
-			// Pass item.Content directly—no asterisks, no type casting needed
-			err := json.Indent(&prettyBuf, item.Content, "", "  ")
-			if err != nil {
-				log.Fatalf("Invalid JSON syntax in file %s: %v", item.Path, err)
-			}
-
-			prettyJsons = append(prettyJsons, prettyBuf.Bytes())
-		}
-
 		fmt.Printf("Parsed JSONs:\n")
 
-		for _, fileBytes := range prettyJsons {
-			fmt.Print("\n" + string(fileBytes))
+		for _, fileBytes := range parsedJsons {
+			fmt.Print("\n" + string(fileBytes.Content))
 		}
 
 	}
@@ -233,7 +212,7 @@ func (fileReader FileReader) ParseJsons(yaml *entities.HymlDocument) (map[string
 		jsons[json] = entities.Json{
 			Name:    json,
 			Path:    file,
-			Content: fileReader.ReadJson(file),
+			Content: ReadRawFile(file),
 		}
 	}
 
@@ -485,21 +464,6 @@ func (fileReader FileReader) ReadPartialYaml(filePath string) *entities.PartialD
 	}
 
 	return &partialFile
-}
-
-func (fileReader FileReader) ReadJson(filePath string) []byte {
-	// 1. Read the raw data (works for JSON or YAML)
-	rawData := ReadRawFile(filePath)
-
-	var prettyBuf bytes.Buffer
-
-	// 2. Format the raw JSON bytes directly
-	err := json.Indent(&prettyBuf, rawData, "", "  ")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return prettyBuf.Bytes()
 }
 
 // ReadRawFile stays 100% generic. It doesn't care if it's JSON, YAML, or text.
