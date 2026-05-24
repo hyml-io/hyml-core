@@ -20,6 +20,19 @@ func (fileReader FileReader) ReadAllYamls(path string) {
 
 	yaml := fileReader.ReadYaml(path)
 
+	definition := fileReader.SetDefinition(yaml)
+
+	fmt.Printf("Definition:\n%#v\n", definition)
+
+}
+
+func (fileReader FileReader) SetHtml(yaml *entities.HymlDocument) *entities.HtmlDocument {
+
+	return nil
+}
+
+func (fileReader FileReader) SetDefinition(yaml *entities.HymlDocument) entities.Definition {
+	definition := entities.Definition{}
 	if len(yaml.Def) > 0 {
 		parsedTemplates, err := fileReader.ParseTemplates(yaml)
 
@@ -44,8 +57,13 @@ func (fileReader FileReader) ReadAllYamls(path string) {
 		for _, fileBytes := range parsedJsons {
 			fmt.Print("JSON: " + fileBytes.Name + "\n" + string(fileBytes.Content) + "\n")
 		}
-
+		definition = entities.Definition{
+			Templates: parsedTemplates,
+			Vars:      parsedVars,
+			Jsons:     parsedJsons,
+		}
 	}
+	return definition
 }
 
 func ParseVars(yaml *entities.HymlDocument) (map[string]entities.Var, error) {
