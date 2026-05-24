@@ -1,6 +1,8 @@
 package utilities
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"hyml-core/entities"
 	"log"
@@ -39,9 +41,33 @@ func (fileReader FileReader) ReadAllYamls(path string) []*entities.HymlDocument 
 
 		fmt.Printf("Parsed Variables:\n%#v\n", parsedVars)
 
-		jsons := extractJsonReferences(yaml)
+		parsedJsons, err := ParseJsons(yaml)
 
-		fmt.Printf("JSON files:\n%#v\n", jsons)
+		var prettyJsons [][]byte
+
+		for _, item := range parsedJsons {
+			// Since item.Content is already a plain []byte, we can check its length
+			if len(item.Content) == 0 {
+				continue
+			}
+
+			var prettyBuf bytes.Buffer
+
+			// Pass item.Content directly—no asterisks, no type casting needed
+			err := json.Indent(&prettyBuf, item.Content, "", "  ")
+			if err != nil {
+				log.Fatalf("Invalid JSON syntax in file %s: %v", item.Path, err)
+			}
+
+			prettyJsons = append(prettyJsons, prettyBuf.Bytes())
+		}
+
+		fmt.Printf("Parsed JSONs:\n")
+
+		for _, fileBytes := range prettyJsons {
+			fmt.Print("\n" + string(fileBytes))
+		}
+
 	}
 
 	yamlsArray = append(yamlsArray, yaml)
@@ -180,6 +206,38 @@ func ParseTemplates(yaml *entities.HymlDocument) (map[string]entities.Template, 
 	}
 
 	return templates, nil
+}
+
+func ParseJsons(yaml *entities.HymlDocument) (map[string]entities.Json, error) {
+	jsons := make(map[string]entities.Json)
+
+	extractedJsonReferences := extractJsonReferences(yaml)
+
+	for i, item := range extractedJsonReferences {
+		jsonNameVal, exists := item["json"]
+		if !exists {
+			return nil, fmt.Errorf("item at index %d is missing the required 'json' key", i)
+		}
+		json, ok := jsonNameVal.(string)
+		if !ok {
+			return nil, fmt.Errorf("item at index %d has a non-string 'json' key", i)
+		}
+		fileNameVal, exists := item["file"]
+		if !exists {
+			return nil, fmt.Errorf("item at index %d is missing the required 'file' key", i)
+		}
+		file, ok := fileNameVal.(string)
+		if !ok {
+			return nil, fmt.Errorf("item at index %d has a non-string 'json' key", i)
+		}
+		jsons[json] = entities.Json{
+			Name:    json,
+			Path:    file,
+			Content: fileReader.ReadJson(file),
+		}
+	}
+
+	return jsons, nil
 }
 
 func parseLocalTemplates(extractedLocalTemplates []map[string]any) ([]entities.Template, error) {
@@ -407,10 +465,10 @@ func extractLocalTemplates(yaml *entities.HymlDocument) []map[string]any {
 
 func (fileReader FileReader) ReadYaml(filePath string) *entities.HymlDocument {
 
-	data := ReadRawYaml(filePath)
+	data := ReadRawFile(filePath)
 
 	var yamlFile entities.HymlDocument
-	err := yaml.Unmarshal(*data, &yamlFile)
+	err := yaml.Unmarshal(data, &yamlFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -422,10 +480,10 @@ func (fileReader FileReader) ReadYaml(filePath string) *entities.HymlDocument {
 
 func (fileReader FileReader) ReadPartialYaml(filePath string) *entities.PartialDocument {
 
-	data := ReadRawYaml(filePath)
+	data := ReadRawFile(filePath)
 
 	var partialFile entities.PartialDocument
-	err := yaml.Unmarshal(*data, &partialFile)
+	err := yaml.Unmarshal(data, &partialFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -433,12 +491,27 @@ func (fileReader FileReader) ReadPartialYaml(filePath string) *entities.PartialD
 	return &partialFile
 }
 
-func ReadRawYaml(filePath string) *[]byte {
+func (fileReader FileReader) ReadJson(filePath string) []byte {
+	// 1. Read the raw data (works for JSON or YAML)
+	rawData := ReadRawFile(filePath)
 
-	data, err := os.ReadFile(filePath)
+	var prettyBuf bytes.Buffer
+
+	// 2. Format the raw JSON bytes directly
+	err := json.Indent(&prettyBuf, rawData, "", "  ")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return &data
+	return prettyBuf.Bytes()
+}
+
+// ReadRawFile stays 100% generic. It doesn't care if it's JSON, YAML, or text.
+func ReadRawFile(filePath string) []byte {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Return the slice directly, no pointer overhead
+	return data
 }

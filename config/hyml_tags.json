@@ -31,6 +31,7 @@
     "content",
     "type",
     "enable-overwrite",
-    "master"
+    "master",
+    "overwrite"
   ]
 }
