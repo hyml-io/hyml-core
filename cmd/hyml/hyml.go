@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"hyml-core/utilities"
 	"os"
 )
@@ -12,7 +11,5 @@ func main() {
 
 	filePath := os.Args[1]
 
-	yamls := fileReader.ReadAllYamls(filePath)
-
-	fmt.Printf("\nLos Yamls: %+v\n", yamls)
+	fileReader.ReadAllYamls(filePath)
 }

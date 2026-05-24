@@ -16,9 +16,7 @@ type FileReader struct {
 
 var stringHandler = StringHandler{}
 
-func (fileReader FileReader) ReadAllYamls(path string) []*entities.HymlDocument {
-
-	yamlsArray := make([]*entities.HymlDocument, 0)
+func (fileReader FileReader) ReadAllYamls(path string) {
 
 	yaml := fileReader.ReadYaml(path)
 
@@ -44,14 +42,10 @@ func (fileReader FileReader) ReadAllYamls(path string) []*entities.HymlDocument 
 		fmt.Printf("Parsed JSONs:\n")
 
 		for _, fileBytes := range parsedJsons {
-			fmt.Print("\n" + string(fileBytes.Content))
+			fmt.Print("JSON: " + fileBytes.Name + "\n" + string(fileBytes.Content) + "\n")
 		}
 
 	}
-
-	yamlsArray = append(yamlsArray, yaml)
-
-	return yamlsArray
 }
 
 func ParseVars(yaml *entities.HymlDocument) (map[string]entities.Var, error) {
